@@ -20,3 +20,9 @@ This was straight forward. Hooked up the clock to 12V supply and switched + and 
 ## Create spare tiles
 
 I used Fusion 360 to design the tiles (hour and minute tiles are identical for my clock). I will try to laser cut them from plexiglas. DXF file shared in this repository.
+
+### Hard Paper / Epoxy Paper Laminate
+
+I tried cuttin hard paper using a laser cutter. This did not produce the requried results. The laser cutter could not cut out the small, 1mm wide, structures of the flip. Even varying the speed or maximum intensitiy of the laser did not produce better reults.
+
+Next up is trying to cut the hard paper with a Cricut.
