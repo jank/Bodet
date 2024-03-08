@@ -23,6 +23,14 @@ I used Fusion 360 to design the tiles (hour and minute tiles are identical for m
 
 ### Hard Paper / Epoxy Paper Laminate
 
-I tried cuttin hard paper using a laser cutter. This did not produce the requried results. The laser cutter could not cut out the small, 1mm wide, structures of the flip. Even varying the speed or maximum intensitiy of the laser did not produce better reults.
+I tried cuttin hard paper using a laser cutter. This did not produce the requried results. The laser cutter could not cut out the small, 1mm wide, structures of the flip. Even varying the speed or maximum intensitiy of the laser did not produce better reults. The material was also too hard to cut it with a Cricut Air 2.
 
-Next up is trying to cut the hard paper with a Cricut.
+### PVC Plastic
+
+I found a rigid-PVC material in black with 0.3 mm thickness in an online shop: https://www.modulor.de/en/rigid-pvc-opaque-coloured.html
+
+While the material is a bit more flexible than the original material it worked out well. Cutting with the Cricut Air 2 worked pretty well.
+
+### Putting numbers on the spare tiles.
+
+On the internet I found the font 'folio' as recommendation for Bodet flip tiles. Next up is cutting out numbers from a thin white foil and attach them to the spare tiles. 
