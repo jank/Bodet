@@ -34,3 +34,13 @@ While the material is a bit more flexible than the original material it worked o
 ### Putting numbers on the spare tiles.
 
 On the internet I found the font 'folio' as recommendation for Bodet flip tiles. Next up is cutting out numbers from a thin white foil and attach them to the spare tiles. 
+
+## Control the Slave Clock
+
+Due to the lack of a matching master clock, I want to run my slave clock using a microcontroller. Based on this [project](https://hackaday.io/project/186457-bodet-flip-clock-hacked-back-to-the-present) I purchased the following equipment for version 1:
+
+* AZ-ATmega328DIP-Board Mikrocontroller Board ATmega16U2 8-bit Dev Board
+*	Jumper Wire cables M2M/ F2M / F2F 
+* Prototyping Prototype Shield Mini Breadboard for UNO R3 (came with bundle)
+* Double H-Bridge DC Motor Controller Board Modul AZ-L298N
+* 220V AC/DC to 12V DC Mini converter
