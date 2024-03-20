@@ -20,7 +20,7 @@ In this repo I documented the process on how I restored the clock and I also sha
 
 As any good plan, mine changed as it was confronted with reality. I wrote down the different steps and detours I took. It might help you or my future self to avoid some detours.
 
-#### Check the clock is working
+### Check the Clock is Working
 
 This was straight forward. Hooked up the clock to 12V supply and switched + and -. When the direction of the current was changed (flip +/-) the clock advanced by one minute.
 
@@ -28,7 +28,7 @@ The mechanics to drive the hour from the minute, the weekday and day of month fr
 
 Seven of the hour and two of the minute tiles were missing.
 
-#### Create spare tiles
+### Create Spare Tiles
 
 I first tried to get spare tiles from Bodet. To no surprise, they do not have them on stock anymore.
 
@@ -44,7 +44,7 @@ I asked the experts at Hema again. They would have milled the pieces for me, but
 
 After more research on the internet, I ordered the [rigid-PVC](https://www.modulor.de/en/rigid-pvc-opaque-coloured.html) from Modulor. This is a black, 0.3 mm thick material. It turned out to have similar flexibility/stiffness as the hard paper and I was able to cut it with the Cricut.
 
-#### Putting numbers on the spare tiles.
+### Putting Numbers on the Spare Tiles.
 
 On the internet I found the font 'folio' as recommendation for Bodet flip tiles. Doing test cuts, it quickly became apparent, that none of the myriads of fonts will do. The numbers of hours and minutes are of different size and slightly different shape. I have the impression, that these printing templates were rather hand-crafted based on a sans-serif template.
 
@@ -52,7 +52,7 @@ My wife helped me out here. She scanned tile that had parts of the missing numbe
 
 We neded up picking white adhesive labels as the material to cut out the numbers. The result is quite impressive. From about a meter distance, it is impossible to distinguish the original tiles from the spare tiles.
 
-## Control the Slave Clock
+### Control the Slave Clock
 
 Due to the lack of a matching master clock, I want to run my slave clock using a microcontroller. 
 
