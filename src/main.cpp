@@ -32,14 +32,14 @@ static const char *cet_tz = "CET-1CEST,M3.5.0/02,M10.5.0/03";
 bool setup_completed = false;
 // used to alternate DC flow
 bool direction = false;
-// Keeps the number of flips to perform on the minute tile.
+// Keeps the number of flips to perform on the minute tile to adjust for DST changes.
 // Values can be positive, 0, or negativ.
 // It is assumed that the main loop is performed at a higher frequency than a minute (e.g. once every 500ms)
 // Positive values indicate the number of minutes to advance the clock.
 // A 0 indicates that the clock does not need to get changed.
 // Negative values indicate that the clock must be paused for -n minutes.
 // Positive values larger than one and negative values can be used to perform summer/winter time adjustment.
-int tile_revolutions = 0;
+int dst_adjustment = 0;
 // keeps the last time assumed to be displayed on clock
 struct tm clock_time;
 
@@ -172,7 +172,6 @@ void loop()
     }
     if (system_time.tm_min != clock_time.tm_min)
     {
-      tile_revolutions += 1;
       advanced_by_minute = true;
     }
 
@@ -180,12 +179,12 @@ void loop()
     if (system_time.tm_isdst && !clock_time.tm_isdst)
     {
       // switch to summer time (DST / CEST)
-      tile_revolutions += 60;
+      dst_adjustment += 60;
     }
     else if (!system_time.tm_isdst && clock_time.tm_isdst)
     {
       // switch to winter time (non-DST / CET)
-      tile_revolutions -= 60;
+      dst_adjustment -= 60;
     }
 
 // debug to serial
@@ -196,8 +195,10 @@ void loop()
       Serial.println(&system_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
       Serial.print("Clock time : ");
       Serial.println(&clock_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-      Serial.print("Tile revolutions: ");
-      Serial.println(tile_revolutions);
+      Serial.print("Advance minute: ");
+      Serial.print(advanced_by_minute);
+      Serial.print("DST adjustments: ");
+      Serial.println(dst_adjustment);
     }
 #endif
 
@@ -206,27 +207,32 @@ void loop()
     {
       // advance clock time
       clock_time = system_time;
-      if (tile_revolutions > 0)
+
+      if (dst_adjustment >= 0)
       {
-        // if clock time is running behind, flip minute tile.
+        // clock time is in sync (normal) or behind system time, flip minute tile.
         advanceMinuteTile();
-        tile_revolutions -= 1;
+        // do not reduce dst_adjustment as this is a regular minute
       }
-      else if (tile_revolutions < 0)
+      else if (dst_adjustment < 0)
       {
-        // clock time is running ahead (DST to normal), do not flip minute tile.
-        tile_revolutions += 1;
+        // clock time is ahead of system time (DST to normal), do not flip minute tile.
+        dst_adjustment += 1;
+#ifdef DEBUG_ENABLED
+        Serial.print(" > DST adjustment: *not* advancing minute, left: ");
+        Serial.println(dst_adjustment);
+#endif
       }
     }
+
     // if clock time is running behind (DST change), catch up
-    if (tile_revolutions > 0)
+    if (dst_adjustment > 0)
     {
       advanceMinuteTile();
-      tile_revolutions -= 1;
-
+      dst_adjustment -= 1;
 #ifdef DEBUG_ENABLED
-      Serial.print(" > catching up time. tile_revolutions left: ");
-      Serial.println(tile_revolutions);
+      Serial.print(" > DST adjustment: advancing minute, left: ");
+      Serial.println(dst_adjustment);
 #endif
     }
 
