@@ -32,7 +32,7 @@ Seven of the hour and two of the minute tiles were missing.
 
 I first tried to get spare tiles from Bodet. To no surprise, they do not have them on stock anymore.
 
-I used Fusion360 to design the tile (hour and minute tiles are identical for my clock). You can find the [Flip Clock Spare Part.dxf](Spare Tiles/Flip Clock Spare Part.dxf) file in this repository .
+I used Fusion360 to design the tile (hour and minute tiles are identical for my clock). You can find the [Flip Clock Spare Part.dxf](/Spare%20Tiles/Flip%20Clock%20Spare%20Part.dxf) file in this repository.
 
 Finding the right material for the tiles was a bit of a challenge. I found a local company, [Hema Kunststoff GmbH](https://maps.app.goo.gl/DWzyLc1jadHfFmLP6), specialized in milling plastic materials. They were very helpful in identifying the material: hard paper. It is a fiber composite material made of paper and a phenol-formaldehyde resin (phenolic resin).
 
