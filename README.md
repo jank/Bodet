@@ -4,18 +4,21 @@ I found a T&N (Telefonbau & Normalzeit) flip clock from the late 70ies/early 80i
 
 I was inspired by this [Hackaday project](https://hackaday.io/project/186457-bodet-flip-clock-hacked-back-to-the-present) by iSax.
 
-This GitHub project documents the process to rebuild my flip clock and provices access to all design files and code created along the way.
+In this repo I documented the process on how I restored the clock and I also share design files and code.
 
 ## The Plan
 
-[x] check the clock is working: I connected the clock to a 12V power supply. Flipping + and - caused the clock to advance by one minute. So I considered it fully functional.
+- [x] check the clock is working: I connected the clock to a 12V power supply. Flipping + and - caused the clock to advance by one minute. So I considered it fully functional.
 
-[x] create spare tiles: I experimented with hard paper and plexiglas. In the end a rigid PVC material worked best. Cut out tiles using a Cricut.
+- [x] create spare tiles: I experimented with hard paper and plexiglas. In the end a rigid PVC material worked best. Cut out tiles using a Cricut.
 
-[x] program micro controller as clock driver: the code is ready. I added support for timezone and DST changes. When changing to DST, the clock will advance by 60 minutes, when changing to normal time, the clock will delay an hour.
+- [x] program micro controller as clock driver: the code is ready. I added support for timezone and DST changes. When changing to DST, the clock will advance by 60 minutes, when changing to normal time, the clock will delay an hour.
 
-[ ] solder all parts together: Provide power from 230V AC, wire up and solder 230V AC to 12V DC converter, ESP32, and H-Bridge to drive clock.
+- [ ] solder all parts together: Provide power from 230V AC, wire up and solder 230V AC to 12V DC converter, ESP32, and H-Bridge to drive clock.
 
+## Implementing the Plan
+
+As any good plan, mine changed as it was confronted with reality. I wrote down the different steps and detours I took. It might help you or my future self to avoid some detours.
 
 #### Check the clock is working
 
