@@ -3,7 +3,7 @@
 
 // Mode configuration - uncomment to run in bare bone mode
 // will advance the tile every 2.5 sec.
-#define BARE_BONE_MODE
+//#define BARE_BONE_MODE
 
 // Log configuration - comment out to get rid of any serial out
 #define DEBUG_ENABLED
@@ -105,10 +105,11 @@ void advanceMinuteTile()
 void setup()
 {
   Serial.begin(115200);
-  // Initializte the GPIO pins as output
+  // Initializte the GPIO pins as output and set voltage
   pinMode(enable_pin, OUTPUT);
   pinMode(input1_pin, OUTPUT);
   pinMode(input2_pin, OUTPUT);
+  advanceMinuteTile();
 
 #ifdef BARE_BONE_MODE
   return;
