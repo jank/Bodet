@@ -105,11 +105,10 @@ void advanceMinuteTile()
 void setup()
 {
   Serial.begin(115200);
-  // Initializte the GPIO pins as output and set output
+  // Initializte the GPIO pins as output
   pinMode(enable_pin, OUTPUT);
   pinMode(input1_pin, OUTPUT);
   pinMode(input2_pin, OUTPUT);
-  advanceMinuteTile();
 
 #ifdef BARE_BONE_MODE
   return;
@@ -158,85 +157,78 @@ void loop()
     DEBUG_PRINTLN("Advance Tile - setup incomplete mode.");
     delay(2500);
     advanceMinuteTile();
+    // exit loop in bare bone mode
+    return;
   }
 
-  else
+  // check if time advanced by a minute
+  bool advanced_by_minute = false;
+  struct tm system_time;
+  if (!getLocalTime(&system_time))
   {
-    // check if time advanced by a minute
-    bool advanced_by_minute = false;
-    struct tm system_time;
-    if (!getLocalTime(&system_time))
-    {
-      DEBUG_PRINTLN("Failed to obtain new system time. Using last clock time.");
-      system_time = clock_time;
-    }
-    if (system_time.tm_min != clock_time.tm_min)
-    {
-      advanced_by_minute = true;
-    }
-
-    // check for DST change
-    if (system_time.tm_isdst && !clock_time.tm_isdst)
-    {
-      // switch to summer time (DST / CEST)
-      dst_adjustment += 60;
-    }
-    else if (!system_time.tm_isdst && clock_time.tm_isdst)
-    {
-      // switch to winter time (non-DST / CET)
-      dst_adjustment -= 60;
-    }
-
-// debug to serial
-#ifdef DEBUG_ENABLED
-    if (advanced_by_minute)
-    {
-      Serial.print("System time: ");
-      Serial.println(&system_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-      Serial.print("Clock time : ");
-      Serial.println(&clock_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-      Serial.print("Advance minute: ");
-      Serial.print(advanced_by_minute);
-      Serial.print("DST adjustments: ");
-      Serial.println(dst_adjustment);
-    }
-#endif
-
-    // advance the clock per minute or to catch up after switch to DST
-    if (advanced_by_minute)
-    {
-      // advance clock time to current system time
-      clock_time = system_time;
-
-      if (dst_adjustment < 0)
-      {
-        // clock time is ahead of system time (DST to normal), do not flip minute tile.
-        dst_adjustment += 1;
-#ifdef DEBUG_ENABLED
-        Serial.print(" > DST adjustment: *not* advancing minute, left: ");
-        Serial.println(dst_adjustment);
-#endif
-      }
-      else
-      {
-        // clock time is in sync (normal) or behind system time, flip minute tile.
-        advanceMinuteTile();
-        // do not reduce dst_adjustment as this is a regular minute
-      }
-      
-    }
-    else if (dst_adjustment > 0)
-    {
-      // if clock time is running behind (DST change), catch up
-      advanceMinuteTile();
-      dst_adjustment -= 1;
-#ifdef DEBUG_ENABLED
-      Serial.print(" > DST adjustment: advancing minute, left: ");
-      Serial.println(dst_adjustment);
-#endif
-    }
-
-    // delay next loop iteration
-    delay(500);
+    DEBUG_PRINTLN("Failed to obtain new system time. Using last clock time.");
+    system_time = clock_time;
   }
+  if (system_time.tm_min != clock_time.tm_min)
+  {
+    advanced_by_minute = true;
+  }
+
+  // check for DST change
+  if (system_time.tm_isdst && !clock_time.tm_isdst)
+  {
+    // switch to summer time (DST / CEST)
+    dst_adjustment += 60;
+  }
+  else if (!system_time.tm_isdst && clock_time.tm_isdst)
+  {
+    // switch to winter time (non-DST / CET)
+    dst_adjustment -= 60;
+  }
+
+  // advance the clock per minute or to catch up after switch to DST
+  if (advanced_by_minute)
+  {
+#ifdef DEBUG_ENABLED
+    Serial.print("System time: ");
+    Serial.println(&system_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+    Serial.print("Clock time : ");
+    Serial.println(&clock_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+    Serial.print("Advance minute: ");
+    Serial.print(advanced_by_minute);
+    Serial.print("DST adjustments: ");
+    Serial.println(dst_adjustment);
+#endif
+    // advance clock time to current system time
+    clock_time = system_time;
+
+    if (dst_adjustment < 0)
+    {
+      // clock time is ahead of system time (DST to normal), do not flip minute tile.
+      dst_adjustment += 1;
+#ifdef DEBUG_ENABLED
+      Serial.print(" > DST adjustment: *not* advancing minute, left: ");
+      Serial.println(dst_adjustment);
+#endif
+    }
+    else
+    {
+      // clock time is in sync (normal) or behind system time, flip minute tile.
+      advanceMinuteTile();
+      // do not reduce dst_adjustment as this is a regular minute
+    }
+  }
+  else if (dst_adjustment > 0)
+  {
+    // if clock time is running behind (DST change), catch up
+    advanceMinuteTile();
+    dst_adjustment -= 1;
+#ifdef DEBUG_ENABLED
+    Serial.print(" > DST adjustment: advancing minute, left: ");
+    Serial.println(dst_adjustment);
+#endif
+  }
+
+  // delay next loop iteration
+  delay(500);
 }
