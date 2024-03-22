@@ -202,10 +202,10 @@ void loop()
     }
 #endif
 
-    // advance the clock minute-wise
+    // advance the clock per minute or to catch up after switch to DST
     if (advanced_by_minute)
     {
-      // advance clock time
+      // advance clock time to current system time
       clock_time = system_time;
 
       if (dst_adjustment >= 0)
@@ -224,10 +224,9 @@ void loop()
 #endif
       }
     }
-
-    // if clock time is running behind (DST change), catch up
-    if (dst_adjustment > 0)
+    else if (dst_adjustment > 0)
     {
+      // if clock time is running behind (DST change), catch up
       advanceMinuteTile();
       dst_adjustment -= 1;
 #ifdef DEBUG_ENABLED
