@@ -208,13 +208,7 @@ void loop()
       // advance clock time to current system time
       clock_time = system_time;
 
-      if (dst_adjustment >= 0)
-      {
-        // clock time is in sync (normal) or behind system time, flip minute tile.
-        advanceMinuteTile();
-        // do not reduce dst_adjustment as this is a regular minute
-      }
-      else if (dst_adjustment < 0)
+      if (dst_adjustment < 0)
       {
         // clock time is ahead of system time (DST to normal), do not flip minute tile.
         dst_adjustment += 1;
@@ -223,6 +217,13 @@ void loop()
         Serial.println(dst_adjustment);
 #endif
       }
+      else
+      {
+        // clock time is in sync (normal) or behind system time, flip minute tile.
+        advanceMinuteTile();
+        // do not reduce dst_adjustment as this is a regular minute
+      }
+      
     }
     else if (dst_adjustment > 0)
     {
