@@ -109,7 +109,8 @@ void setup()
   pinMode(enable_pin, OUTPUT);
   pinMode(input1_pin, OUTPUT);
   pinMode(input2_pin, OUTPUT);
-  advanceMinuteTile();
+  //better without? advanceMinuteTile();
+  // just plugin in clock a few seconds after the minute switched to what is shown on the clock.
 
 #ifdef BARE_BONE_MODE
   return;
@@ -146,22 +147,21 @@ void setup()
 }
 
 /**
+* Loop for bare bone testing mode.
+*/
+void bare_bone_loop()
+{
+  DEBUG_PRINT("Advance Tile in bare bone mode.");
+  advanceMinuteTile();
+  delay(500);
+}
+
+/**
  * Main loop driving the minute tile flip. This loop should be run more often than once per minute.
  * Otherwise the calcuation of minutes to flip will not work.
  */
-// cppcheck-suppress unusedFunction
-void loop()
+void main_loop()
 {
-  // To allow testing without WiFi and/or NTP
-  if (!setup_completed)
-  {
-    DEBUG_PRINTLN("Advance Tile - setup incomplete mode.");
-    delay(2500);
-    advanceMinuteTile();
-    // exit loop in bare bone mode
-    return;
-  }
-
   // check if time advanced by a minute
   bool advanced_by_minute = false;
   struct tm system_time;
@@ -200,7 +200,7 @@ void loop()
     Serial.print("DST adjustments: ");
     Serial.println(dst_adjustment);
 #endif
-    // advance clock time to current system time
+    // set clock time to system time
     clock_time = system_time;
 
     if (dst_adjustment < 0)
@@ -225,11 +225,26 @@ void loop()
     advanceMinuteTile();
     dst_adjustment -= 1;
 #ifdef DEBUG_ENABLED
-    Serial.print(" > DST adjustment: advancing minute, left: ");
+    Serial.print(" > DST adjustment: advancing minute, delta left: ");
     Serial.println(dst_adjustment);
 #endif
   }
 
-  // delay next loop iteration
+  // 500ms delay is the result of tests with the clock.
+  // This results in tiles quickly for testing or during DST switch.
   delay(500);
+}
+
+// cppcheck-suppress unusedFunction
+void loop()
+{
+  // To allow testing without WiFi and/or NTP
+  if (!setup_completed)
+  {
+    bare_bone_loop();
+    return;
+  }
+  else {
+    main_loop();
+  }  
 }
