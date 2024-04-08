@@ -98,6 +98,30 @@ The Netgear power supply delivered between 14 and 14.5V voltage. This is suffici
 
 When all was working using the jump wire calbes, I was ready to establish my soldering skills. I purchased a pack of [prototype boards](https://www.amazon.de/dp/B09NDNPF91?psc=1&ref=ppx_yo2ov_dt_b_product_details). It has been a long time since I have done some soldering. After a lot of back and forth, and testing the connections with the multimeter I managed to get it all wrapped up.
 
+This is the circuit plan of the final assmebly:
+
+```
++12V ---•-----------------------------------------
+        |
+     +--•--------------------+       +-------+
+     | +12V             OUT1 •-------• BT600 |
+     |                       |       | Clock |
+     |     *L298N*      OUT2 •-------• Motor |
+     |                       |       +-------+
+     | GND   ENA IN1 IN2 +5V |
+     +--•-----•---•---•---•--+
+        |     |   |   |   |
+        |   +-•---•---•---•--+       
+        |   | 21  23  22 +5V |     
+        |   |                |
+        |   |    *ESP32*     |
+        |   |                |
+        |   | GND            |
+        |   +--•-------------+  
+        |      |
+GND  ---•-----------------------------------------
+```
+
 ### Work Left
 
 The Bodet clock has a mechanism to advance the day of month correctly, even in the presence of a leap year. I could not get this mechanism to work. It is driven by an additional motor that is installed behind the day of month display. It uses a wheel with sliding contacts to advance the day of month depending on month and year. A quite simple but sophisticated mechanism. It seems that this motor does not get sufficient voltage (I measure 2.8V) but as I do not have the specs, I am not quite sure. I leave this for the next iteration.
