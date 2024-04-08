@@ -106,17 +106,18 @@ The Bodet clock has a mechanism to advance the day of month correctly, even in t
 
 The flip clock is mounted in our kitchen and works nicely.
 
-![Flip Clock assmebled](pictures/FlipClock - assembled.jpeg)
+![Flip Clock assmebled](pictures/FlipClock%20-%20assembled.jpeg)
 
 On the inside it is a bit more messy, but it gets the job done.
 
-![Flip Clock - inside](FlipClock - inside.jpeg)
+![Flip Clock - inside](pictures/FlipClock%20-%20inside.jpeg)
 
 Flipping the minute generates a satisfying sound.
 
 ![Minute flip](https://github.com/jank/Bodet/assets/5099251/fa8b5b44-c8f6-45a2-a900-c80cad40a6cd)
 
+Here are detailed pictures of the sliding contact mechanism driving the day of month.
 
+![Day of month left side](pictures/FlipClock%20-%20day%20of%20month%20left%20side.jpeg)
 
-
-
+![Day of month right side](pictures/FlipClock%20-%20day%20of%20month%20right%20side.jpeg)
