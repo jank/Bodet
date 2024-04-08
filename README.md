@@ -54,6 +54,8 @@ We neded up picking white adhesive labels as the material to cut out the numbers
 
 ### Control the Slave Clock
 
+#### The Software
+
 Due to the lack of a matching master clock, I want to run my slave clock using a microcontroller. 
 
 My rough idea for the algorithm was:
@@ -72,6 +74,10 @@ My rough idea for the algorithm was:
     * tile buffer++ // the wall clock is ahead of system time
   * if tile buffer > 0
     * advance clock // the wall clock is behind system time
+   
+You can find the source code in [src/main.cpp](src/main.cpp). This all worked out quite well.
+
+#### The Hardware
 
 Based on this [project](https://hackaday.io/project/186457-bodet-flip-clock-hacked-back-to-the-present) I purchased the following equipment for version 1:
 
@@ -84,6 +90,17 @@ Based on this [project](https://hackaday.io/project/186457-bodet-flip-clock-hack
 I was intruiged by the capability to run the board on 12V. That is also the current required to drive the clock motor and the H-Bridge. But I must have been a bit tired when I hit purchase. The ATmega board does not have WiFi on-board. Instead of buying a WiFi shield or a real-time-clock I decided to change to this option:
 
 * ESP32 NodeMCU Module WLAN WiFi Development Board | Dev Kit C V2
-* Jumper Wire cables M2M/ F2M / F2F 
+* Jumper Wire cables M2M/ F2M / F2F
 
-Luckily, the H-Bridge provides a 5V power out pin. So I can connect the DC Mini converter to the H-Bridge and power the ESP32 from the 5V output. No need for an additional step-down component.
+Luckily, the H-Bridge provides a 5V power out pin. To get things started, I experimented with an old Netgear 12V power supply. I connected the power source to the H-Bridge and power the ESP32 from the 5V output. No need for an additional step-down component.
+
+The Netgear power supply delivered between 14 and 14.5V voltage. This is sufficient to power the clock. In the end, I was not to convinced of the mini AC/DC converter, so I purchased a 230V to [12V LED transformer](https://www.amazon.de/dp/B0CN92H7H8?psc=1&ref=ppx_yo2ov_dt_b_product_details). The form factor was perfect as it nicely fit into the clock housing. However, the 12V current it delivered was too little to drive the minute tiles. So I switched back to the old Netgear power supply.
+
+When all was working using the jump wire calbes, I was ready to establish my soldering skills. I purchased a pack of [prototype boards](https://www.amazon.de/dp/B09NDNPF91?psc=1&ref=ppx_yo2ov_dt_b_product_details). It has been a long time since I have done some soldering. After a lot of back and forth, and testing the connections with the multimeter I managed to get it all wrapped up.
+
+### Work Left
+
+The Bodet clock has a mechanism to advance the day of month correctly, even in the presence of a leap year. I could not get this mechanism to work. It is driven by an additional motor that is installed behind the day of month display. It uses a wheel with sliding contacts to advance the day of month depending on month and year. A quite simple but sophisticated mechanism. It seems that this motor does not get sufficient voltage (I measure 2.8V) but as I do not have the specs, I am not quite sure. I leave this for the next iteration.
+
+### The Final Result
+
