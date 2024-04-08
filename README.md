@@ -14,7 +14,7 @@ In this repo I documented the process on how I restored the clock and I also sha
 
 - [x] program micro controller as clock driver: the code is ready. I added support for timezone and DST changes. When changing to DST, the clock will advance by 60 minutes, when changing to normal time, the clock will delay an hour.
 
-- [ ] solder all parts together: Provide power from 230V AC, wire up and solder 230V AC to 12V DC converter, ESP32, and H-Bridge to drive clock.
+- [x] solder all parts together: Provide power from 230V AC, wire up and solder 230V AC to 12V DC converter, ESP32, and H-Bridge to drive clock.
 
 ## Implementing the Plan
 
