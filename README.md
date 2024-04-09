@@ -6,6 +6,8 @@ I was inspired by this [Hackaday project](https://hackaday.io/project/186457-bod
 
 In this repo I documented the process on how I restored the clock and I also share design files and code.
 
+![Minute flip](https://github.com/jank/Bodet/assets/5099251/fa8b5b44-c8f6-45a2-a900-c80cad40a6cd)
+
 ## The Plan
 
 - [x] check the clock is working: I connected the clock to a 12V power supply. Flipping + and - caused the clock to advance by one minute. So I considered it fully functional.
@@ -137,8 +139,6 @@ On the inside it is a bit more messy, but it gets the job done.
 ![Flip Clock - inside](pictures/FlipClock%20-%20inside.jpeg)
 
 Flipping the minute generates a satisfying sound.
-
-![Minute flip](https://github.com/jank/Bodet/assets/5099251/fa8b5b44-c8f6-45a2-a900-c80cad40a6cd)
 
 Here are detailed pictures of the sliding contact mechanism driving the day of month.
 
