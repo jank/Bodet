@@ -33,7 +33,7 @@ public:
 #ifdef ENABLE_LOGGING
     va_list args;
     va_start(args, format);
-    Serial.vprintf(format, args);
+    Serial.printf(format, args);
     va_end(args);
     Serial.println();
 #endif
@@ -43,8 +43,10 @@ public:
   static void logTime(const char *label, const struct tm *t) {
 #ifdef ENABLE_LOGGING
     if (t) {
+      char timeStringBuff[64]; // Make sure the buffer is large enough
+      strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S zone %Z %z", t);
       Serial.print(label);
-      Serial.println(t, ": %A, %B %d %Y %H:%M:%S zone %Z %z");
+      Serial.println(timeStringBuff);
     }
 #endif
   }
