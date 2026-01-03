@@ -2,23 +2,62 @@
 #include <WiFi.h>
 
 // Mode configuration - uncomment to run in bare bone mode
-// will advance the tile every 2.5 sec.
+// will advance the tile every 0.5 sec.
 //#define BARE_BONE_MODE
 
-// Log configuration - comment out to get rid of any serial out
-#define DEBUG_ENABLED
-#ifdef DEBUG_ENABLED
-#define DEBUG_PRINTLN(x) Serial.println(x)
-#define DEBUG_PRINT(x) Serial.print(x)
-#else
-#define DEBUG_PRINTLN(x)
-#define DEBUG_PRINT(x)
+// Log configuration - comment out to disable logging
+#define ENABLE_LOGGING
+
+class Logger {
+public:
+  static void begin(unsigned long baud) {
+#ifdef ENABLE_LOGGING
+    Serial.begin(baud);
 #endif
+  }
+
+  static void print(const char *msg) {
+#ifdef ENABLE_LOGGING
+    Serial.print(msg);
+#endif
+  }
+
+  static void print(IPAddress ip) {
+#ifdef ENABLE_LOGGING
+    Serial.print(ip);
+#endif
+  }
+
+  // Formatting logger (printf style) that adds a newline
+  static void log(const char *format, ...) {
+#ifdef ENABLE_LOGGING
+    va_list args;
+    va_start(args, format);
+    Serial.vprintf(format, args);
+    va_end(args);
+    Serial.println();
+#endif
+  }
+
+  // Specialized helper for printing tm structs
+  static void logTime(const char *label, const struct tm *t) {
+#ifdef ENABLE_LOGGING
+    if (t) {
+      Serial.print(label);
+      Serial.println(t, ": %A, %B %d %Y %H:%M:%S zone %Z %z");
+    }
+#endif
+  }
+};
 
 // Board parameters
 static const int enable_pin = 21;
 static const int input1_pin = 23;
 static const int input2_pin = 22;
+
+// Duration to keep the motor enabled in milliseconds
+#define PULSE_DURATION_MS 500
+#define LOOP_DELAY_MS 500
 
 // WiFi parameters
 static const char *ssid = "WLAN SSID";
@@ -30,18 +69,48 @@ static const char *cet_tz = "CET-1CEST,M3.5.0/02,M10.5.0/03";
 
 /** Global varibales */
 bool setup_completed = false;
-// used to alternate DC flow
-bool direction = false;
-// Keeps the number of flips to perform on the minute tile to adjust for DST changes.
-// Values can be positive, 0, or negativ.
-// It is assumed that the main loop is performed at a higher frequency than a minute (e.g. once every 500ms)
-// Positive values indicate the number of minutes to advance the clock.
-// A 0 indicates that the clock does not need to get changed.
-// Negative values indicate that the clock must be paused for -n minutes.
-// Positive values larger than one and negative values can be used to perform summer/winter time adjustment.
-int dst_adjustment = 0;
-// keeps the last time assumed to be displayed on clock
-struct tm clock_time;
+// keeps the last time (epoch) assumed to be displayed on clock
+time_t last_displayed_time = 0;
+
+/**
+ * Class to handle the mechanical clock hardware
+ */
+class ClockDriver {
+private:
+  int _pin_enable;
+  int _pin_in1;
+  int _pin_in2;
+  int _pulse_ms;
+  bool _direction;
+
+public:
+  ClockDriver(int en, int in1, int in2, int pulse_ms) 
+    : _pin_enable(en), _pin_in1(in1), _pin_in2(in2), _pulse_ms(pulse_ms), _direction(false) {}
+
+  void begin() {
+    pinMode(_pin_enable, OUTPUT);
+    pinMode(_pin_in1, OUTPUT);
+    pinMode(_pin_in2, OUTPUT);
+    digitalWrite(_pin_enable, LOW); // Ensure motor is off
+  }
+
+  void advance() {
+    _direction = !_direction;
+    if (_direction) {
+      Logger::log("DC >>>");
+    } else {
+      Logger::log("DC <<<");
+    }
+
+    digitalWrite(_pin_in1, _direction);
+    digitalWrite(_pin_in2, !_direction);
+    digitalWrite(_pin_enable, HIGH); // Enable the motor
+    delay(_pulse_ms);
+    digitalWrite(_pin_enable, LOW);  // Disable the motor
+  }
+};
+
+ClockDriver clockDriver(enable_pin, input1_pin, input2_pin, PULSE_DURATION_MS);
 
 /**
  * Setup NTP and set local time zone
@@ -50,7 +119,7 @@ void initTime(String timezone)
 {
   struct tm timeinfo;
 
-  DEBUG_PRINTLN("Setting up time");
+  Logger::log("Setting up time");
   // First connect to NTP server, with 0 TZ offset
   configTime(0, 0, ntp_pool);
   int ntp_retries = 3;
@@ -58,19 +127,14 @@ void initTime(String timezone)
   {
     if (!getLocalTime(&timeinfo))
     {
-#ifdef DEBUG_ENABLED
-      Serial.println("  Failed to obtain time");
-      Serial.print("  Retry attempts left: ");
-      Serial.println(ntp_retries);
-#endif
+      Logger::log("  Failed to obtain time");
+      Logger::log("  Retry attempts left: %d", ntp_retries);
       ntp_retries -= 1;
     }
     else
     {
-#ifdef DEBUG_ENABLED
-      Serial.println("  Got time from NTP");
-      Serial.printf("  Setting Timezone to %s\n", timezone.c_str());
-#endif
+      Logger::log("  Got time from NTP");
+      Logger::log("  Setting Timezone to %s", timezone.c_str());
       // Set the timezone
       setenv("TZ", timezone.c_str(), 1);
       tzset();
@@ -79,38 +143,14 @@ void initTime(String timezone)
   }
 }
 
-// Function to alternate the direction of current to drive the clock motor
-void advanceMinuteTile()
-{
-  direction = !direction;
-#ifdef DEBUG_ENABLED
-  if (direction)
-  {
-    Serial.println("DC >>>");
-  }
-  else
-  {
-    Serial.println("DC <<<");
-  }
-#endif
-  digitalWrite(input1_pin, direction);
-  digitalWrite(input2_pin, !direction);
-  digitalWrite(enable_pin, HIGH); // Enable the motor
-}
-
 /**
  * Setup Bodet Clock Driver
  */
 // cppcheck-suppress unusedFunction
 void setup()
 {
-  Serial.begin(115200);
-  // Initializte the GPIO pins as output and set voltage
-  pinMode(enable_pin, OUTPUT);
-  pinMode(input1_pin, OUTPUT);
-  pinMode(input2_pin, OUTPUT);
-  //better without? advanceMinuteTile();
-  // just plugin in clock a few seconds after the minute switched to what is shown on the clock.
+  Logger::begin(115200);
+  clockDriver.begin();
 
 #ifdef BARE_BONE_MODE
   return;
@@ -118,42 +158,30 @@ void setup()
 
   // Connect to WiFi network
   WiFi.begin(ssid, password);
-  DEBUG_PRINT("Connecting to WiFi.");
+  Logger::print("Connecting to WiFi.");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(200);
-    DEBUG_PRINT(".");
+    Logger::print(".");
   }
-  DEBUG_PRINTLN("");
-  DEBUG_PRINTLN("Connected to WiFi.");
-  DEBUG_PRINT("IP Address: ");
-  DEBUG_PRINTLN(WiFi.localIP());
+  Logger::log(""); // Newline
+  Logger::log("Connected to WiFi.");
+  Logger::print("IP Address: ");
+  Logger::print(WiFi.localIP());
+  Logger::log(""); // Newline
 
   // Configure NTP and clock time
   initTime(cet_tz);
-  if (!getLocalTime(&clock_time))
-  {
-    DEBUG_PRINTLN("Failed to obtain clock time");
-    return;
-  }
+  
+  // Initialize the last displayed time to current time
+  time(&last_displayed_time);
 
-#ifdef DEBUG_ENABLED
-  Serial.print("Clock time is: ");
-  Serial.println(&clock_time, "%A, %B %d %Y %H:%M zone %Z %z ");
-  Serial.println("Setup completed.");
-#endif
+  struct tm timeinfo;
+  localtime_r(&last_displayed_time, &timeinfo);
+  Logger::logTime("Clock initialized to", &timeinfo);
+  Logger::log("Setup completed.");
 
   setup_completed = true;
-}
-
-/**
-* Loop for bare bone testing mode.
-*/
-void bare_bone_loop()
-{
-  DEBUG_PRINT("Advance Tile in bare bone mode.");
-  advanceMinuteTile();
-  delay(500);
 }
 
 /**
@@ -162,77 +190,71 @@ void bare_bone_loop()
  */
 void main_loop()
 {
-  // check if time advanced by a minute
-  bool advanced_by_minute = false;
-  struct tm system_time;
-  if (!getLocalTime(&system_time))
-  {
-    DEBUG_PRINTLN("Failed to obtain new system time. Using last clock time.");
-    system_time = clock_time;
-  }
-  if (system_time.tm_min != clock_time.tm_min)
-  {
-    advanced_by_minute = true;
-  }
+  static unsigned long last_wifi_reconnect_attempt = 0;
+  static bool wifi_was_connected = true; // Assume connected after setup
 
-  // check for DST change
-  if (system_time.tm_isdst && !clock_time.tm_isdst)
-  {
-    // switch to summer time (DST / CEST)
-    dst_adjustment += 60;
-  }
-  else if (!system_time.tm_isdst && clock_time.tm_isdst)
-  {
-    // switch to winter time (non-DST / CET)
-    dst_adjustment -= 60;
-  }
-
-  // advance the clock per minute or to catch up after switch to DST
-  if (advanced_by_minute)
-  {
-#ifdef DEBUG_ENABLED
-    Serial.print("System time: ");
-    Serial.println(&system_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-    Serial.print("Clock time : ");
-    Serial.println(&clock_time, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-    Serial.print("Advance minute: ");
-    Serial.print(advanced_by_minute);
-    Serial.print("DST adjustments: ");
-    Serial.println(dst_adjustment);
-#endif
-    // set clock time to system time
-    clock_time = system_time;
-
-    if (dst_adjustment < 0)
-    {
-      // clock time is ahead of system time (DST to normal), do not flip minute tile.
-      dst_adjustment += 1;
-#ifdef DEBUG_ENABLED
-      Serial.print(" > DST adjustment: *not* advancing minute, left: ");
-      Serial.println(dst_adjustment);
-#endif
+  // Non-blocking WiFi Reconnection Logic
+  if (WiFi.status() != WL_CONNECTED) {
+    if (wifi_was_connected) {
+      Logger::log("WiFi Connection lost. Clock continues on internal timer.");
+      wifi_was_connected = false;
     }
-    else
-    {
-      // clock time is in sync (normal) or behind system time, flip minute tile.
-      advanceMinuteTile();
-      // do not reduce dst_adjustment as this is a regular minute
+
+    unsigned long now_ms = millis();
+    // Try to reconnect every 60 seconds, but don't block execution
+    if (now_ms - last_wifi_reconnect_attempt > 60000) {
+      Logger::log("Attempting background WiFi reconnect...");
+      WiFi.reconnect();
+      last_wifi_reconnect_attempt = now_ms;
+    }
+  } else {
+    if (!wifi_was_connected) {
+      Logger::log("WiFi reconnected.");
+      wifi_was_connected = true;
+      // Note: Standard ESP32 SNTP service will automatically resume syncing
     }
   }
-  else if (dst_adjustment > 0)
-  {
-    // if clock time is running behind (DST change), catch up
-    advanceMinuteTile();
-    dst_adjustment -= 1;
-#ifdef DEBUG_ENABLED
-    Serial.print(" > DST adjustment: advancing minute, delta left: ");
-    Serial.println(dst_adjustment);
-#endif
+
+  time_t now;
+  time(&now);
+
+  // Calculate the difference in minutes between current system time and displayed time
+  // difftime returns double (seconds), so we divide by 60
+  double diff_seconds = difftime(now, last_displayed_time);
+  int diff_minutes = (int)(diff_seconds / 60);
+
+  if (diff_minutes != 0) {
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    Logger::logTime("System time", &timeinfo);
+    
+    localtime_r(&last_displayed_time, &timeinfo);
+    Logger::logTime("Clock time ", &timeinfo);
+    
+    Logger::log("Time diff (min): %d", diff_minutes);
   }
 
-  // 500ms delay is the result of tests with the clock.
-  // This results in tiles quickly for testing or during DST switch.
-  delay(500);
+  if (diff_minutes > 0)
+  {
+    // The clock is behind system time (or DST forward switch)
+    // Advance the clock one minute
+    clockDriver.advance();
+    
+    // Update the internal state: we are now 60 seconds closer to 'now'
+    // We add 60 seconds to the *displayed* time, not just set it to 'now',
+    // to ensures we step through every minute physically.
+    last_displayed_time += 60;
+  }
+  else if (diff_minutes < 0)
+  {
+    // The clock is ahead of system time (e.g. DST backward switch)
+    // We do nothing and wait for time to catch up.
+    // last_displayed_time remains the same.
+    Logger::log("Clock ahead - Waiting for time to catch up...");
+  }
+
+  // delay to allow loop to breathe and motor to rest between rapid flips
+  delay(LOOP_DELAY_MS);
 }
 
 // cppcheck-suppress unusedFunction
@@ -241,8 +263,11 @@ void loop()
   // To allow testing without WiFi and/or NTP
   if (!setup_completed)
   {
-    bare_bone_loop();
-    return;
+    // Testing mode: advances the clock tile periodically 
+    // without any time synchronization logic.
+    Logger::log("Advance Tile in test mode.");
+    clockDriver.advance();
+    delay(LOOP_DELAY_MS);
   }
   else {
     main_loop();
