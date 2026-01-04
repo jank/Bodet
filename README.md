@@ -1,12 +1,34 @@
 # Bodet / T&N Flip Clock
 
-I found a T&N (Telefonbau & Normalzeit) flip clock from the late 70ies/early 80ies. The clock is branded as T&N but was produced by Bodet.The model sticker on the inside says BT637.
+I found a T&N (Telefonbau & Normalzeit) flip clock from the late 1970s/early 1980s. The clock is branded as T&N but was produced by Bodet. The model sticker on the inside says BT637.
+
+**This project converts a vintage Bodet flip clock into a WiFi-connected, NTP-synchronized timepiece using an ESP32 microcontroller.** The system automatically handles timezone and DST changes, keeping the mechanical flip display accurately synchronized with internet time.
 
 I was inspired by this [Hackaday project](https://hackaday.io/project/186457-bodet-flip-clock-hacked-back-to-the-present) by iSax.
 
-In this repo I documented the process on how I restored the clock and I also share design files and code.
+In this repo I documented the process of how I restored the clock and I also share design files and code.
 
 ![Minute flip](https://github.com/jank/Bodet/assets/5099251/fa8b5b44-c8f6-45a2-a900-c80cad40a6cd)
+
+## Table of Contents
+
+- [Features](#features)
+- [The Plan](#the-plan)
+- [Implementing the Plan](#implementing-the-plan)
+  - [Check the Clock is Working](#check-the-clock-is-working)
+  - [Create Spare Tiles](#create-spare-tiles)
+  - [Putting Numbers on the Spare Tiles](#putting-numbers-on-the-spare-tiles)
+  - [Control the Slave Clock](#control-the-slave-clock)
+- [Work Left](#work-left)
+- [The Final Result](#the-final-result)
+
+## Features
+
+- NTP time synchronization via WiFi
+- DST (Daylight Saving Time) support with automatic adjustment
+- Preserves original mechanical flip display
+- ESP32-based control system
+- 12V H-Bridge motor driver
 
 ## The Plan
 
@@ -16,7 +38,9 @@ In this repo I documented the process on how I restored the clock and I also sha
 
 - [x] program micro controller as clock driver: the code is ready. I added support for timezone and DST changes. When changing to DST, the clock will advance by 60 minutes, when changing to normal time, the clock will delay an hour.
 
-- [x] solder all parts together: Provide power from 230V AC, wire up and solder 230V AC to 12V DC converter, ESP32, and H-Bridge to drive clock.
+- [x] solder all parts together: Provided power from 230V AC, wire up and solder 230V AC to 12V DC converter, ESP32, and H-Bridge to drive clock.
+
+> ⚠️ **Safety Warning**: This project involves working with 230V AC mains voltage. Only proceed if you have experience with high voltage systems and take appropriate safety precautions.
 
 ## Implementing the Plan
 
@@ -52,7 +76,7 @@ On the internet I found the font 'folio' as recommendation for Bodet flip tiles.
 
 My wife helped me out here. She scanned tile that had parts of the missing numbers and reconstructed the shape in the Cricut design program. This required a lot of patience and I am happy that she took over.
 
-We neded up picking white adhesive labels as the material to cut out the numbers. The result is quite impressive. From about a meter distance, it is impossible to distinguish the original tiles from the spare tiles.
+We ended up picking white adhesive labels as the material to cut out the numbers. The result is quite impressive. From about a meter distance, it is impossible to distinguish the original tiles from the spare tiles.
 
 ### Control the Slave Clock
 
@@ -89,7 +113,7 @@ Based on this [project](https://hackaday.io/project/186457-bodet-flip-clock-hack
 * Double H-Bridge DC Motor Controller Board Modul AZ-L298N
 * 220V AC/DC to 12V DC Mini converter
 
-I was intruiged by the capability to run the board on 12V. That is also the current required to drive the clock motor and the H-Bridge. But I must have been a bit tired when I hit purchase. The ATmega board does not have WiFi on-board. Instead of buying a WiFi shield or a real-time-clock I decided to change to this option:
+I was intrigued by the capability to run the board on 12V. That is also the current required to drive the clock motor and the H-Bridge. But I must have been a bit tired when I hit purchase. The ATmega board does not have WiFi on-board. Instead of buying a WiFi shield or a real-time-clock I decided to change to this option:
 
 * ESP32 NodeMCU Module WLAN WiFi Development Board | Dev Kit C V2
 * Jumper Wire cables M2M/ F2M / F2F
@@ -100,7 +124,11 @@ The Netgear power supply delivered between 14 and 14.5V voltage. This is suffici
 
 When all was working using the jump wire calbes, I was ready to establish my soldering skills. I purchased a pack of [prototype boards](https://www.amazon.de/dp/B09NDNPF91?psc=1&ref=ppx_yo2ov_dt_b_product_details). It has been a long time since I have done some soldering. After a lot of back and forth, and testing the connections with the multimeter I managed to get it all wrapped up.
 
-This is the circuit plan of the final assmebly:
+#### Circuit Diagram
+
+The final assembly connects the ESP32 to the L298N H-Bridge motor driver, which controls the clock motor. The H-Bridge is powered from a 12V source and provides 5V to the ESP32. The GPIO pins 21, 22, and 23 control the motor direction and enable signals.
+
+This is the circuit plan of the final assembly:
 
 ```
 +12V ---•-----------------------------------------
@@ -132,7 +160,7 @@ The Bodet clock has a mechanism to advance the day of month correctly, even in t
 
 The flip clock is mounted in our kitchen and works nicely.
 
-![Flip Clock assmebled](pictures/FlipClock%20-%20assembled.jpeg)
+![Flip Clock assembled](pictures/FlipClock%20-%20assembled.jpeg)
 
 On the inside it is a bit more messy, but it gets the job done.
 
