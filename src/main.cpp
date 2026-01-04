@@ -60,7 +60,6 @@ static const int MOTOR_DIRECTION_A_PIN = 23;
 static const int MOTOR_DIRECTION_B_PIN = 22;
 
 // Timing constants (milliseconds)
-static const int PULSE_DURATION_MS = 200;
 static const int LOOP_DELAY_MS = 500;
 
 // WiFi credentials
@@ -90,12 +89,11 @@ private:
   int _pinEnable;
   int _pinDirectionA;
   int _pinDirectionB;
-  int _pulseMs;
   bool _direction;
 
 public:
-  ClockDriver(int enable, int directionA, int directionB, int pulseMs) 
-    : _pinEnable(enable), _pinDirectionA(directionA), _pinDirectionB(directionB), _pulseMs(pulseMs), _direction(false) {}
+  ClockDriver(int enable, int directionA, int directionB) 
+    : _pinEnable(enable), _pinDirectionA(directionA), _pinDirectionB(directionB), _direction(false) {}
 
   void begin() {
     pinMode(_pinEnable, OUTPUT);
@@ -115,12 +113,10 @@ public:
     digitalWrite(_pinDirectionA, _direction);
     digitalWrite(_pinDirectionB, !_direction);
     digitalWrite(_pinEnable, HIGH); // Enable the motor
-    delay(_pulseMs);
-    digitalWrite(_pinEnable, LOW);  // Disable the motor
   }
 };
 
-ClockDriver clockDriver(MOTOR_ENABLE_PIN, MOTOR_DIRECTION_A_PIN, MOTOR_DIRECTION_B_PIN, PULSE_DURATION_MS);
+ClockDriver clockDriver(MOTOR_ENABLE_PIN, MOTOR_DIRECTION_A_PIN, MOTOR_DIRECTION_B_PIN);
 
 // ============================================================================
 // TIME INITIALIZATION
@@ -265,8 +261,6 @@ void loop()
     Logger::log("Time diff (min): %d", minutesDifference);
   }
 
-  int loopDelay = LOOP_DELAY_MS;
-
   if (minutesDifference > 0)
   {
     // The clock is behind system time (or DST forward switch)
@@ -277,8 +271,7 @@ void loop()
     // We add 60 seconds to the *displayed* time, not just set it to 'now',
     // to ensures we step through every minute physically.
     displayedClockTime += 60;
-    loopDelay -= PULSE_DURATION_MS;
   }
 
-  delay(loopDelay);
+  delay(LOOP_DELAY_MS);
 }
