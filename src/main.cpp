@@ -1,9 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
-
-// Mode configuration - uncomment to run in bare bone mode
-// will advance the tile every 0.5 sec.
-//#define BARE_BONE_MODE
+#include <esp_sntp.h>
 
 // Log configuration - comment out to disable logging
 #define ENABLE_LOGGING
@@ -33,9 +30,10 @@ public:
 #ifdef ENABLE_LOGGING
     va_list args;
     va_start(args, format);
-    Serial.printf(format, args);
+    char buffer[256];
+    vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
-    Serial.println();
+    Serial.println(buffer);
 #endif
   }
 
@@ -44,7 +42,7 @@ public:
 #ifdef ENABLE_LOGGING
     if (t) {
       char timeStringBuff[64]; // Make sure the buffer is large enough
-      strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S zone %Z %z", t);
+      strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", t);
       Serial.print(label);
       Serial.println(timeStringBuff);
     }
@@ -52,48 +50,58 @@ public:
   }
 };
 
-// Board parameters
-static const int enable_pin = 21;
-static const int input1_pin = 23;
-static const int input2_pin = 22;
+// ============================================================================
+// CONFIGURATION CONSTANTS
+// ============================================================================
 
-// Duration to keep the motor enabled in milliseconds
-#define PULSE_DURATION_MS 500
-#define LOOP_DELAY_MS 500
+// Motor control pins
+static const int MOTOR_ENABLE_PIN = 21;
+static const int MOTOR_DIRECTION_A_PIN = 23;
+static const int MOTOR_DIRECTION_B_PIN = 22;
 
-// WiFi parameters
-static const char *ssid = "WLAN SSID";
-static const char *password = "secret";
+// Timing constants (milliseconds)
+static const int PULSE_DURATION_MS = 200;
+static const int LOOP_DELAY_MS = 500;
 
-// NTP parameters
-static const char *ntp_pool = "de.pool.ntp.org";
-static const char *cet_tz = "CET-1CEST,M3.5.0/02,M10.5.0/03";
+// WiFi credentials
+static const char *WIFI_SSID = "Alternativlos";
+static const char *WIFI_PASSWORD = "Mannheim";
 
-/** Global varibales */
-bool setup_completed = false;
-// keeps the last time (epoch) assumed to be displayed on clock
-time_t last_displayed_time = 0;
+// NTP and timezone configuration
+static const char *NTP_SERVER = "de.pool.ntp.org";
+static const char *TIMEZONE_CET = "CET-1CEST,M3.5.0/02,M10.5.0/03";
+
+// ============================================================================
+// GLOBAL STATE
+// ============================================================================
+
+// Tracks the time (epoch) currently displayed on the physical clock
+time_t displayedClockTime = 0;
+
+// ============================================================================
+// CLOCK DRIVER CLASS
+// ============================================================================
 
 /**
  * Class to handle the mechanical clock hardware
  */
 class ClockDriver {
 private:
-  int _pin_enable;
-  int _pin_in1;
-  int _pin_in2;
-  int _pulse_ms;
+  int _pinEnable;
+  int _pinDirectionA;
+  int _pinDirectionB;
+  int _pulseMs;
   bool _direction;
 
 public:
-  ClockDriver(int en, int in1, int in2, int pulse_ms) 
-    : _pin_enable(en), _pin_in1(in1), _pin_in2(in2), _pulse_ms(pulse_ms), _direction(false) {}
+  ClockDriver(int enable, int directionA, int directionB, int pulseMs) 
+    : _pinEnable(enable), _pinDirectionA(directionA), _pinDirectionB(directionB), _pulseMs(pulseMs), _direction(false) {}
 
   void begin() {
-    pinMode(_pin_enable, OUTPUT);
-    pinMode(_pin_in1, OUTPUT);
-    pinMode(_pin_in2, OUTPUT);
-    digitalWrite(_pin_enable, LOW); // Ensure motor is off
+    pinMode(_pinEnable, OUTPUT);
+    pinMode(_pinDirectionA, OUTPUT);
+    pinMode(_pinDirectionB, OUTPUT);
+    digitalWrite(_pinEnable, LOW); // Ensure motor is off
   }
 
   void advance() {
@@ -104,15 +112,30 @@ public:
       Logger::log("DC <<<");
     }
 
-    digitalWrite(_pin_in1, _direction);
-    digitalWrite(_pin_in2, !_direction);
-    digitalWrite(_pin_enable, HIGH); // Enable the motor
-    delay(_pulse_ms);
-    digitalWrite(_pin_enable, LOW);  // Disable the motor
+    digitalWrite(_pinDirectionA, _direction);
+    digitalWrite(_pinDirectionB, !_direction);
+    digitalWrite(_pinEnable, HIGH); // Enable the motor
+    delay(_pulseMs);
+    digitalWrite(_pinEnable, LOW);  // Disable the motor
   }
 };
 
-ClockDriver clockDriver(enable_pin, input1_pin, input2_pin, PULSE_DURATION_MS);
+ClockDriver clockDriver(MOTOR_ENABLE_PIN, MOTOR_DIRECTION_A_PIN, MOTOR_DIRECTION_B_PIN, PULSE_DURATION_MS);
+
+// ============================================================================
+// TIME INITIALIZATION
+// ============================================================================
+
+/**
+ * Callback function for SNTP sync notifications
+ */
+void timeSyncNotificationCallback(struct timeval *tv)
+{
+  struct tm timeinfo;
+  time_t syncTime = tv->tv_sec;
+  localtime_r(&syncTime, &timeinfo);
+  Logger::logTime("NTP sync completed at ", &timeinfo);
+}
 
 /**
  * Setup NTP and set local time zone
@@ -122,20 +145,26 @@ void initTime(String timezone)
   struct tm timeinfo;
 
   Logger::log("Setting up time");
+  
+  // Configure SNTP before connecting
+  sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);  // Gradual time adjustment
+  sntp_set_sync_interval(3600000);            // Sync every hour (in milliseconds)
+  sntp_set_time_sync_notification_cb(timeSyncNotificationCallback);
+  
   // First connect to NTP server, with 0 TZ offset
-  configTime(0, 0, ntp_pool);
-  int ntp_retries = 3;
-  while (ntp_retries > 0)
+  configTime(0, 0, NTP_SERVER);
+  int ntpRetries = 3;
+  while (ntpRetries > 0)
   {
     if (!getLocalTime(&timeinfo))
     {
-      Logger::log("  Failed to obtain time");
-      Logger::log("  Retry attempts left: %d", ntp_retries);
-      ntp_retries -= 1;
+      Logger::log("  Failed to obtain NTP time");
+      Logger::log("  Retry attempts left: %d", ntpRetries);
+      ntpRetries -= 1;
     }
     else
     {
-      Logger::log("  Got time from NTP");
+      Logger::log("  NTP setup successful");
       Logger::log("  Setting Timezone to %s", timezone.c_str());
       // Set the timezone
       setenv("TZ", timezone.c_str(), 1);
@@ -145,21 +174,21 @@ void initTime(String timezone)
   }
 }
 
+// ============================================================================
+// ARDUINO SETUP AND MAIN LOOP
+// ============================================================================
+
 /**
  * Setup Bodet Clock Driver
  */
 // cppcheck-suppress unusedFunction
 void setup()
 {
-  Logger::begin(115200);
+  Logger::begin(57600);
   clockDriver.begin();
 
-#ifdef BARE_BONE_MODE
-  return;
-#endif
-
   // Connect to WiFi network
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Logger::print("Connecting to WiFi.");
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -173,47 +202,48 @@ void setup()
   Logger::log(""); // Newline
 
   // Configure NTP and clock time
-  initTime(cet_tz);
+  initTime(TIMEZONE_CET);
   
-  // Initialize the last displayed time to current time
-  time(&last_displayed_time);
+  // Initialize the displayed clock time to current time
+  time(&displayedClockTime);
 
   struct tm timeinfo;
-  localtime_r(&last_displayed_time, &timeinfo);
-  Logger::logTime("Clock initialized to", &timeinfo);
+  localtime_r(&displayedClockTime, &timeinfo);
+  Logger::logTime("Clock initialized to: ", &timeinfo);
   Logger::log("Setup completed.");
-
-  setup_completed = true;
 }
 
 /**
  * Main loop driving the minute tile flip. This loop should be run more often than once per minute.
  * Otherwise the calcuation of minutes to flip will not work.
  */
-void main_loop()
+// cppcheck-suppress unusedFunction
+void loop()
 {
-  static unsigned long last_wifi_reconnect_attempt = 0;
-  static bool wifi_was_connected = true; // Assume connected after setup
+  static unsigned long lastWifiReconnectAttempt = 0;
+  static bool wifiWasConnected = true; // Assume connected after setup
 
   // Non-blocking WiFi Reconnection Logic
   if (WiFi.status() != WL_CONNECTED) {
-    if (wifi_was_connected) {
+    if (wifiWasConnected) {
       Logger::log("WiFi Connection lost. Clock continues on internal timer.");
-      wifi_was_connected = false;
+      wifiWasConnected = false;
     }
 
-    unsigned long now_ms = millis();
+    unsigned long currentMillis = millis();
     // Try to reconnect every 60 seconds, but don't block execution
-    if (now_ms - last_wifi_reconnect_attempt > 60000) {
+    if (currentMillis - lastWifiReconnectAttempt > 60000) {
       Logger::log("Attempting background WiFi reconnect...");
       WiFi.reconnect();
-      last_wifi_reconnect_attempt = now_ms;
+      lastWifiReconnectAttempt = currentMillis;
     }
   } else {
-    if (!wifi_was_connected) {
+    if (!wifiWasConnected) {
       Logger::log("WiFi reconnected.");
-      wifi_was_connected = true;
-      // Note: Standard ESP32 SNTP service will automatically resume syncing
+      wifiWasConnected = true;
+      // Force an immediate NTP resync after reconnection
+      Logger::log("Forcing NTP resync...");
+      sntp_restart();
     }
   }
 
@@ -222,21 +252,22 @@ void main_loop()
 
   // Calculate the difference in minutes between current system time and displayed time
   // difftime returns double (seconds), so we divide by 60
-  double diff_seconds = difftime(now, last_displayed_time);
-  int diff_minutes = (int)(diff_seconds / 60);
+  // Use round() to properly handle fractional minutes (e.g., 59.98 minutes should be 60)
+  double diffSeconds = difftime(now, displayedClockTime);
+  int minutesDifference = (int)round(diffSeconds / 60.0);
 
-  if (diff_minutes != 0) {
+  if (minutesDifference != 0) {
     struct tm timeinfo;
     localtime_r(&now, &timeinfo);
-    Logger::logTime("System time", &timeinfo);
-    
-    localtime_r(&last_displayed_time, &timeinfo);
-    Logger::logTime("Clock time ", &timeinfo);
-    
-    Logger::log("Time diff (min): %d", diff_minutes);
+    Logger::logTime("System time: ", &timeinfo);    
+    localtime_r(&displayedClockTime, &timeinfo);
+    Logger::logTime("Clock time:  ", &timeinfo);
+    Logger::log("Time diff (min): %d", minutesDifference);
   }
 
-  if (diff_minutes > 0)
+  int loopDelay = LOOP_DELAY_MS;
+
+  if (minutesDifference > 0)
   {
     // The clock is behind system time (or DST forward switch)
     // Advance the clock one minute
@@ -245,33 +276,9 @@ void main_loop()
     // Update the internal state: we are now 60 seconds closer to 'now'
     // We add 60 seconds to the *displayed* time, not just set it to 'now',
     // to ensures we step through every minute physically.
-    last_displayed_time += 60;
-  }
-  else if (diff_minutes < 0)
-  {
-    // The clock is ahead of system time (e.g. DST backward switch)
-    // We do nothing and wait for time to catch up.
-    // last_displayed_time remains the same.
-    Logger::log("Clock ahead - Waiting for time to catch up...");
+    displayedClockTime += 60;
+    loopDelay -= PULSE_DURATION_MS;
   }
 
-  // delay to allow loop to breathe and motor to rest between rapid flips
-  delay(LOOP_DELAY_MS);
-}
-
-// cppcheck-suppress unusedFunction
-void loop()
-{
-  // To allow testing without WiFi and/or NTP
-  if (!setup_completed)
-  {
-    // Testing mode: advances the clock tile periodically 
-    // without any time synchronization logic.
-    Logger::log("Advance Tile in test mode.");
-    clockDriver.advance();
-    delay(LOOP_DELAY_MS);
-  }
-  else {
-    main_loop();
-  }  
+  delay(loopDelay);
 }
